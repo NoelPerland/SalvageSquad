@@ -1,0 +1,29 @@
+# Salvage Squad
+- Unity 6000.3.26f1 LTS, C#, URP. Windows development; iOS signing/device validation deferred.
+- Read this file and only task-relevant source/docs. Never glob-read Markdown or scan Library/.
+- Current scope: polished 60–90 second slice. Economy, ads, IAP, backend and Overdrive remain deferred.
+- Current milestone: three-detail reward/boss polish complete; 4 targeted PlayMode regressions, Windows build and visible win/loss QA pass. No work in progress. Next: boss destruction timing or human feedback. Preserve fixed separated gates, committed-side shooting and boss-only attacks. Resume ../AI-Handoff.md.
+- Runtime code: Assets/Game/Runtime. Main scene: Assets/Scenes/Scrapline.unity; preserve TrainingRange regression scene.
+- PrototypeRun owns run/reset; SquadController owns input/formation; CombatSystem owns pools/hits.
+- SliceRun owns authored encounters/end states; GateRow resolves choices; SliceFeedback owns presentation feedback.
+- Use explicit scene references, existing components and fixed formation slots.
+- No new abstraction, dependency, skill, agent or MD file without a concrete net benefit.
+- Preserve user scene/art edits. PrototypeSetup.Create refuses to overwrite an existing scene.
+- PresentationUpgrade is an explicit art migration, never automatic. Generated kit: Assets/Game/Art/Polished; verify captures after changes.
+- PlayFeelTuning explicitly overwrites encounter/enemy tuning. Do not rerun over later manual edits; ordinary tuning uses saved level assets.
+- Package and Editor versions are pinned in Packages and ProjectSettings, not prose.
+- Use the new Input System. Keep APIs portable to iOS; do not block Windows on missing Xcode.
+- Read callers before changing shared behavior; avoid speculative rewrites.
+- Use official version-matched docs/issues when uncertain; research after two failed hypotheses.
+- For testing use Unity Test Runner: EditMode logic checks and PlayMode scene/reset checks.
+- Build menu: Salvage Squad > Build Windows Prototype.
+- Shell editor: C:/Program Files/Unity/Hub/Editor/6000.3.26f1/Editor/Unity.exe
+- Batch setup: -batchmode -quit -projectPath <project> -executeMethod SalvageSquad.Editor.PrototypeSetup.Create -logFile <log>
+- Batch tests: -batchmode -projectPath <project> -runTests -testPlatform EditMode|PlayMode -testResults <xml> -logFile <log>
+- Batch build: -batchmode -quit -projectPath <project> -executeMethod SalvageSquad.Editor.PrototypeSetup.BuildWindows -logFile <log>
+- Actual-player checks: development build -sliceReview (real-time replay/captures) or -sliceBenchmark (crowd stress). Launch visibly: hidden Windows players skip rendering. Read measured dimensions; Windows may clamp oversized windows.
+- Report actual checks separately from manual/device checks; no unsupported performance claims.
+- Caveman for short updates, normal language for code/docs; Ponytail for complete minimal changes.
+- Keep changes scoped; reuse systems and run targeted checks.
+- After each meaningful verified chunk, overwrite README resume state: completed, in progress, exact next task, known issues. Keep it tiny; do not accumulate logs.
+- One agent by default. Graphify only when a relevant graph saves work. OmniRoute is unconfigured.

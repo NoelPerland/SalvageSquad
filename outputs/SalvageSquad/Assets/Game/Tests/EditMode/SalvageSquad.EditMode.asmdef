@@ -1,0 +1,6 @@
+{
+  "name": "SalvageSquad.EditMode",
+  "references": ["SalvageSquad.Runtime"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

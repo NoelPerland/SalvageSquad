@@ -1,0 +1,5 @@
+{
+  "name": "SalvageSquad.PlayMode",
+  "references": ["SalvageSquad.Runtime", "Unity.ugui", "Unity.InputSystem", "Unity.RenderPipelines.Universal.Runtime"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

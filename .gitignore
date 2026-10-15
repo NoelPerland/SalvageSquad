@@ -1,0 +1,17 @@
+# Publish only the Unity project, its handoff, and selected gameplay captures.
+/*
+!/.gitignore
+!/README.md
+!/outputs/
+/outputs/*
+!/outputs/SalvageSquad/
+!/outputs/AI-Handoff.md
+!/outputs/Handoff-Images/
+/outputs/SalvageSquad/[Bb]uild/
+/outputs/SalvageSquad/[Bb]uilds/
+/outputs/SalvageSquad/[Mm]emoryCaptures/
+/outputs/SalvageSquad/[Rr]ecordings/
+/outputs/SalvageSquad/.env*
+*.p12
+*.pfx
+*.keystore
