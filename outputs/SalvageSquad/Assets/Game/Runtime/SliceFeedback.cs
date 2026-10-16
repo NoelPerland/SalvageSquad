@@ -8,10 +8,11 @@ namespace SalvageSquad
         public bool ReducedMotion { get; private set; }
         public bool Muted { get; private set; }
         AudioSource effects, music;
-        AudioClip gate, hurt, win, loop, warning, impact;
+        AudioClip gate, hurt, win, loop, warning, impact, slide, skid;
         Vector3 home;
         float homeSize;
         float shake;
+        float movementCooldown;
         float distance = 22, focusZ = 6;
         public void Initialize()
         {
@@ -23,6 +24,8 @@ namespace SalvageSquad
             gate = MakeTone("Brass power-up", .46f, 330, true);
             hurt = CombatSystem.MakeMechanical("Armor loss", .3f, 82, 1);
             impact = CombatSystem.MakeMechanical("Crusher floor strike", .22f, 58, 1);
+            slide = CombatSystem.MakeMechanical("Robot slide", .16f, 145, .18f);
+            skid = CombatSystem.MakeMechanical("Robot skid", .13f, 185, .4f);
             warning = MakeTone("Lane warning", .25f, 210, false);
             win = MakeTone("Run complete", 1.25f, 390, true);
             loop = MakeMusic(); music.clip = loop; music.loop = true; music.volume = .075f;
@@ -40,10 +43,13 @@ namespace SalvageSquad
         }
         public void Warn() => effects.PlayOneShot(warning,.3f);
         public void Impact() { effects.PlayOneShot(impact,.24f); shake=Mathf.Max(shake,.07f); }
+        public void Slide() { if(movementCooldown>0)return;effects.PlayOneShot(slide,.1f);movementCooldown=.09f; }
+        public void Skid() { if(movementCooldown>0)return;effects.PlayOneShot(skid,.13f);movementCooldown=.13f; }
         public void SetClimax(bool boss) { music.pitch=boss?1.06f:1;music.volume=boss?.09f:.075f; }
         public void Tick(float dt)
         {
             shake = Mathf.MoveTowards(shake, 0, dt);
+            movementCooldown=Mathf.Max(0,movementCooldown-dt);
             if (squad && !view.orthographic)
             {
                 float growth = Mathf.Clamp01((squad.UnitCount - 5) / 55f);
@@ -71,7 +77,7 @@ namespace SalvageSquad
             if (paused) { music.Pause(); effects.Pause(); }
             else { music.UnPause(); effects.UnPause(); }
         }
-        public void ResetFeedback() { shake = 0; distance = 22; focusZ = 6; ApplyCamera(); effects.Stop(); SetClimax(false); music.time = 0; if(!music.isPlaying)music.Play(); }
+        public void ResetFeedback() { shake = movementCooldown = 0; distance = 22; focusZ = 6; ApplyCamera(); effects.Stop(); SetClimax(false); music.time = 0; if(!music.isPlaying)music.Play(); }
         static AudioClip MakeTone(string name, float duration, float hz, bool rise)
         {
             const int rate = 22050;
@@ -118,6 +124,7 @@ namespace SalvageSquad
             if (gate) Destroy(gate); if (hurt) Destroy(hurt); if (win) Destroy(win); if (loop) Destroy(loop);
             if(warning)Destroy(warning);
             if(impact)Destroy(impact);
+            if(slide)Destroy(slide);if(skid)Destroy(skid);
         }
     }
 }

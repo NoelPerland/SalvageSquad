@@ -2,7 +2,7 @@
 - Unity 6000.3.26f1 LTS, C#, URP. Windows development; iOS signing/device validation deferred.
 - Read this file and only task-relevant source/docs. Never glob-read Markdown or scan Library/.
 - Current scope: polished 60–90 second slice. Economy, ads, IAP, backend and Overdrive remain deferred.
-- Current milestone: three-detail reward/boss polish complete; 4 targeted PlayMode regressions, Windows build and visible win/loss QA pass. No work in progress. Next: boss destruction timing or human feedback. Preserve fixed separated gates, committed-side shooting and boss-only attacks. Resume ../AI-Handoff.md.
+- Current milestone: 2026-10-16 game-feel pass complete; 64 tests, current Windows build, visible win/loss QA and stress pass. Next: human steering/health/audio playtest and measured boss tuning. Resume ../AI-Handoff.md.
 - Runtime code: Assets/Game/Runtime. Main scene: Assets/Scenes/Scrapline.unity; preserve TrainingRange regression scene.
 - PrototypeRun owns run/reset; SquadController owns input/formation; CombatSystem owns pools/hits.
 - SliceRun owns authored encounters/end states; GateRow resolves choices; SliceFeedback owns presentation feedback.

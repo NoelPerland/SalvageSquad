@@ -10,6 +10,7 @@ namespace SalvageSquad
         public Transform[] flashes;
         public RectTransform[] buttons;
         public Camera uiCamera;
+        public SliceFeedback feedback;
         public float horizontalLimit = 2.65f;
         public float moveSpeed = 18f;
         public float shotInterval = .48f;
@@ -27,12 +28,14 @@ namespace SalvageSquad
         Transform[] roots;
         Transform[] cannons;
         Vector3[] cannonScales;
+        Vector3[] bodyScales;
         Vector3[] cannonPositions, muzzlePositions;
         Transform[] heavySleeves;
         float[] shotTimers;
         double[] shotRemainders;
         float protection;
         float motionTime;
+        float visualLean, lastSlideSpeed;
         bool formationMode;
 
         public void Initialize(CombatSystem system, int capacity = 5)
@@ -46,6 +49,7 @@ namespace SalvageSquad
             roots = new Transform[capacity]; shotTimers = new float[capacity];
             shotRemainders = new double[capacity];
             cannons = new Transform[capacity]; cannonScales = new Vector3[capacity];
+            bodyScales = new Vector3[capacity];
             cannonPositions = new Vector3[capacity]; muzzlePositions = new Vector3[capacity]; heavySleeves = new Transform[capacity];
             for (int i = 0; i < capacity; i++)
             {
@@ -57,6 +61,7 @@ namespace SalvageSquad
                     flashes[i] = muzzles[i].Find("Muzzle flash");
                 }
                 else roots[i] = bodies[i].parent;
+                bodyScales[i] = bodies[i].localScale;
                 cannons[i] = bodies[i].Find("Cannon");
                 if (cannons[i]) cannonScales[i] = cannons[i].localScale;
                 if (cannons[i]) { cannonPositions[i] = cannons[i].localPosition; heavySleeves[i] = cannons[i].Find("Heavy sleeve"); }
@@ -120,6 +125,7 @@ namespace SalvageSquad
             DesiredX = shotTimer = recoil = 0;
             protection = 0; Damage = WeaponTier = 1; FireRate = 1; HasSteered = false;
             motionTime = 0;
+            visualLean = lastSlideSpeed = 0;
             SetCount(5);
             for (int i = 0; i < roots.Length; i++)
             {
@@ -134,7 +140,9 @@ namespace SalvageSquad
                 if (cannons[i]) cannons[i].localPosition = cannonPositions[i];
                 if (heavySleeves[i]) heavySleeves[i].gameObject.SetActive(false);
                 muzzles[i].localPosition = muzzlePositions[i];
+                muzzles[i].localScale = Vector3.one;
                 bodies[i].localPosition = Vector3.zero;
+                bodies[i].localScale = bodyScales[i];
             }
             CancelDrag();
             foreach (Transform body in bodies) body.localRotation = Quaternion.identity;
@@ -176,6 +184,13 @@ namespace SalvageSquad
 
             float previousX = transform.position.x;
             transform.position = new Vector3(Mathf.MoveTowards(previousX, DesiredX, moveSpeed * dt), 0, 0);
+            float slideSpeed=(transform.position.x-previousX)/Mathf.Max(dt,.001f);
+            if(feedback && formationMode)
+            {
+                if(Mathf.Abs(lastSlideSpeed)>8 && (Mathf.Abs(slideSpeed)<1 || Mathf.Sign(slideSpeed)!=Mathf.Sign(lastSlideSpeed)))feedback.Skid();
+                else if(Mathf.Abs(slideSpeed)>8 && Mathf.Abs(lastSlideSpeed)<1)feedback.Slide();
+            }
+            lastSlideSpeed=slideSpeed;
             shotTimer -= dt;
             recoil = Mathf.Max(0, recoil - dt * 10f);
             protection = Mathf.Max(0, protection - dt);
@@ -183,7 +198,8 @@ namespace SalvageSquad
             {
                 motionTime += dt;
                 float positionBlend = 1 - Mathf.Exp(-12 * dt), scaleBlend = 1 - Mathf.Exp(-10 * dt);
-                float formationLean = ReducedMotion ? 0 : Mathf.Clamp((transform.position.x - previousX) / Mathf.Max(dt, .001f) * -1.5f, -15, 15);
+                float formationLean = ReducedMotion ? 0 : Mathf.Clamp(slideSpeed * -1.5f, -15, 15);
+                visualLean = ReducedMotion ? 0 : Mathf.Lerp(visualLean, formationLean, 1 - Mathf.Exp(-18 * dt));
                 combat.ShotStrength = Mathf.Lerp(.65f, 1.25f, UnitCount / 60f);
                 float firingRate = Mathf.Min(3, FireRate);
                 for (int i = 0; i < VisibleCount; i++)
@@ -200,15 +216,17 @@ namespace SalvageSquad
                         double power=Damage*(double)represented*(FireRate/firingRate)+shotRemainders[i];
                         int shotDamage=(int)System.Math.Min(int.MaxValue,System.Math.Floor(power));
                         shotRemainders[i]=power>=int.MaxValue?0:power-shotDamage;
-                        combat.Fire(muzzles[i].position, shotDamage, WeaponTier >= 2, transform.position.x);
+                        combat.Fire(muzzles[i].position, shotDamage, WeaponTier >= 2, transform.position.x, WeaponTier);
                         shotTimers[i] += shotInterval / firingRate;
                     }
                     float kick = Mathf.Clamp01(1 - (shotInterval / firingRate - shotTimers[i]) * 12);
-                    bodies[i].localRotation = Quaternion.Euler(ReducedMotion ? 0 : -kick * 4, 0, formationLean);
-                    bodies[i].localPosition = Vector3.up * (ReducedMotion ? 0 : Mathf.Sin(motionTime * 12 + i * 1.7f) * .028f);
+                    bodies[i].localRotation = Quaternion.Euler(ReducedMotion ? 0 : -kick * (4 + Mathf.Min(5, WeaponTier - 1) * 1.5f), 0, visualLean);
+                    bodies[i].localPosition = ReducedMotion ? Vector3.zero : new Vector3(-visualLean * .004f, Mathf.Sin(motionTime * 12 + i * 1.7f) * .028f, 0);
+                    float stretch = ReducedMotion ? 0 : Mathf.Abs(visualLean) * .0025f;
+                    bodies[i].localScale = Vector3.Scale(bodyScales[i], new Vector3(1 + stretch, 1 - stretch, 1));
                     flashes[i].gameObject.SetActive(kick > .6f);
-                    muzzles[i].localScale = Vector3.one * (WeaponTier >= 2 ? 1.6f : 1);
-                    if (cannons[i]) cannons[i].localScale = cannonScales[i] * (WeaponTier >= 2 ? 1.4f : 1);
+                    muzzles[i].localScale = Vector3.one * (1 + Mathf.Min(5, WeaponTier - 1) * .15f);
+                    if (cannons[i]) cannons[i].localScale = cannonScales[i] * (1 + Mathf.Min(5, WeaponTier - 1) * .1f);
                     if (cannons[i]) cannons[i].localPosition = cannonPositions[i] - Vector3.forward * (kick * .07f);
                     if (heavySleeves[i]) heavySleeves[i].gameObject.SetActive(WeaponTier >= 2);
                 }

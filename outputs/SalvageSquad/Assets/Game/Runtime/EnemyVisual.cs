@@ -22,9 +22,9 @@ namespace SalvageSquad
         public void Tick(float age, float hit, float attack = 0)
         {
             float bob = kind == EnemyKind.Boss ? .015f : .035f;
-            shell.transform.localPosition = new Vector3(0, Mathf.Sin(age * 9) * bob, hit * .035f);
+            shell.transform.localPosition = new Vector3(0, Mathf.Sin(age * 9) * bob, hit * .1f);
             float windup = kind == EnemyKind.Charger && age < 1.2f ? -12 : 0;
-            shell.transform.localRotation = Quaternion.Euler(windup + hit * 5 - attack * 7, 0, Mathf.Sin(age * 6) * 2);
+            shell.transform.localRotation = Quaternion.Euler(windup + hit * 11 - attack * 7, 0, Mathf.Sin(age * 6) * 2);
             if(kind==EnemyKind.Boss && crusherArms!=null)foreach(var arm in crusherArms)
                 arm.localRotation=Quaternion.Euler(Mathf.SmoothStep(0,1,attack)*85,0,0);
         }

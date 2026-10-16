@@ -29,7 +29,7 @@ namespace SalvageSquad
         public float BossArrivalRemaining { get; private set; }
         public bool BossArmored => BossArrivalRemaining>0;
 
-        sealed class Bullet { public Transform view; public Renderer renderer; public int damage; public float aimX; }
+        sealed class Bullet { public Transform view; public Renderer renderer; public int damage, tier; public float aimX; }
         sealed class Target
         {
             public Transform view;
@@ -47,6 +47,7 @@ namespace SalvageSquad
             public Transform[] chips;
             public Vector3[] chipStarts;
             public float life;
+            public float force;
         }
 
         Bullet[] bullets;
@@ -137,7 +138,7 @@ namespace SalvageSquad
             if(paused){sound.Pause();shots.Pause();}else{sound.UnPause();shots.UnPause();}
         }
 
-        public bool Fire(Vector3 origin, int damage, bool heavy = false, float aimX=float.NaN)
+        public bool Fire(Vector3 origin, int damage, bool heavy = false, float aimX=float.NaN, int tier=1)
         {
             foreach (Bullet bullet in bullets)
             {
@@ -145,8 +146,12 @@ namespace SalvageSquad
                 bullet.view.position = origin;
                 bullet.renderer.enabled = !sliceMode || origin.z >= 1.2f;
                 bullet.damage = damage;
+                bullet.tier = tier;
                 bullet.aimX=float.IsNaN(aimX)?origin.x:aimX;
-                bullet.view.localScale = Vector3.one * Mathf.Min(1.8f, 1 + (damage - 1) * .2f);
+                bullet.view.localScale = Vector3.one * Mathf.Min(1.9f, 1 + (damage - 1) * .2f + Mathf.Min(5,tier-1)*.04f);
+                properties.SetColor(BaseColor,Color.Lerp(new Color(1,.66f,.34f),new Color(1,.88f,.58f),Mathf.Clamp01((tier-1)*.2f)));
+                properties.SetColor(EmissionColor,new Color(1,.64f,.29f)*Mathf.Min(.5f,.22f+tier*.04f));
+                bullet.renderer.SetPropertyBlock(properties);
                 bullet.view.gameObject.SetActive(true);
                 ActiveProjectiles++;
                 TotalShots++;
@@ -154,7 +159,7 @@ namespace SalvageSquad
                 if(shotCooldown <= 0)
                 {
                     bool powerful = heavy || damage >= 4;
-                    shots.PlayOneShot(powerful ? cannonSound : shotSounds[shotVariant++ % shotSounds.Length], (powerful ? .23f : .16f) * ShotStrength);
+                    shots.PlayOneShot(powerful ? cannonSound : shotSounds[shotVariant++ % shotSounds.Length], (powerful ? .23f+Mathf.Min(5,tier-1)*.018f : .16f) * ShotStrength);
                     shotCooldown = powerful ? .095f : .075f;
                 }
                 return true;
@@ -230,11 +235,11 @@ namespace SalvageSquad
                 Color baseColor = target.settings ? target.settings.color : target.color;
                 if (target.settings && target.settings.kind == EnemyKind.Charger && target.age < 1.2f)
                     baseColor = Color.Lerp(baseColor, Color.white, Mathf.PingPong(target.age * 6, 1));
-                properties.SetColor(BaseColor, Color.Lerp(baseColor, Color.white, target.flash * .55f));
+                properties.SetColor(BaseColor, Color.Lerp(baseColor, Color.white, target.flash * .85f));
                 if (target.visual)
                 {
                     properties.SetColor(BaseColor, boss&&BossArmored?new Color(.35f,.65f,1):Color.white);
-                    float glow = target.flash * .5f;
+                    float glow = target.flash * .7f;
                     if (target.settings && target.settings.kind == EnemyKind.Charger && target.age < 1.2f)
                         glow = Mathf.Max(glow, Mathf.PingPong(target.age * 6, 1) * .2f);
                     properties.SetColor(EmissionColor, Color.white * glow);
@@ -294,7 +299,7 @@ namespace SalvageSquad
                     if (boss) BossHealth = (float)nearest.health.Current / nearest.health.Maximum;
                     if (destroyed)
                     {
-                        Pop(nearest.view.position);
+                        Pop(nearest.view.position,1+Mathf.Min(5,bullet.tier-1)*.16f);
                         if(!boss)nearest.view.gameObject.SetActive(false);
                         ActiveTargets--;
                         Salvaged++;
@@ -329,12 +334,12 @@ namespace SalvageSquad
                 if (burst.core)
                 {
                     float t = Mathf.Clamp01(1 - burst.life / .5f);
-                    burst.core.localScale = Vector3.one * (.65f * Mathf.Pow(1 - t, 2));
-                    burst.ring.localScale = Vector3.one * (1 + t * 2.8f);
+                    burst.core.localScale = Vector3.one * (.65f * burst.force * Mathf.Pow(1 - t, 2));
+                    burst.ring.localScale = Vector3.one * (1 + t * 2.8f * burst.force);
                     burst.ring.gameObject.SetActive(t < .45f);
                     for (int i = 0; i < burst.chips.Length; i++)
                     {
-                        burst.chips[i].localPosition = burst.chipStarts[i] * (1 + t * 3) + Vector3.up * (Mathf.Sin(t * Mathf.PI) * .7f);
+                        burst.chips[i].localPosition = burst.chipStarts[i] * (1 + t * 3 * burst.force) + Vector3.up * (Mathf.Sin(t * Mathf.PI) * .7f * burst.force);
                         burst.chips[i].localScale = new Vector3(.13f,.15f,.2f) * (1 - t);
                         burst.chips[i].localRotation = Quaternion.Euler(t * 270, i * 60, t * 150);
                     }
@@ -352,7 +357,7 @@ namespace SalvageSquad
             }
         }
 
-        public void Pop(Vector3 position)
+        public void Pop(Vector3 position,float force=1)
         {
             foreach (Burst burst in bursts)
             {
@@ -361,11 +366,12 @@ namespace SalvageSquad
                 burst.view.rotation = Quaternion.identity;
                 burst.view.localScale = burst.core ? Vector3.one : Vector3.zero;
                 burst.life = burst.core ? .5f : .35f;
+                burst.force = force;
                 if (burst.core)
                 {
                     burst.ring.localPosition = new Vector3(0, .03f - position.y, 0);
                     burst.ring.gameObject.SetActive(true);
-                    burst.core.localScale = Vector3.one * .65f;
+                    burst.core.localScale = Vector3.one * (.65f * force);
                     for (int i = 0; i < burst.chips.Length; i++)
                     {
                         burst.chips[i].localPosition = burst.chipStarts[i];

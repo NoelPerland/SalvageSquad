@@ -1,6 +1,6 @@
 # Salvage Squad — AI handoff
 
-Updated 2026-10-15. Continue the existing project; do not recreate it.
+Updated 2026-10-16. Continue the existing project; do not recreate it.
 
 Project: `C:/Users/Noel/Documents/Codex/2026-10-12/we-are-starting-a-brand-new/outputs/SalvageSquad`
 Unity **6000.3.26f1**, C#, URP. Windows development; iOS signing/device validation deferred.
@@ -8,6 +8,9 @@ Unity **6000.3.26f1**, C#, URP. Windows development; iOS signing/device validati
 Read `SalvageSquad/AGENTS.md`, then only task-relevant files. Caveman/Ponytail; no broad scans, new frameworks or meta systems. OmniRoute is unconfigured.
 
 ## Completed
+
+- **2026-10-16 game-feel pass:** squad/boss health tween with delayed amber loss, damage flinch and danger colors. Fatal loss resolves in the HUD. Steering responds immediately while robot lean/stretch and small slide/skid sounds add weight. Better-tier guns gain bounded recoil, muzzle and projectile scale, warmer shots and stronger hit flash/debris. Existing controls/content preserved.
+
 
 - Latest focused polish: clearer reward text hierarchy, delayed medal stamp (reduced motion respected), heavy boss-death impact layered under victory cue. Three changes only; verified and checkpointed sequentially.
 
@@ -21,18 +24,15 @@ Read `SalvageSquad/AGENTS.md`, then only task-relevant files. Caveman/Ponytail; 
 
 ## Verified
 
-- Latest polish: **4 focused PlayMode regressions pass**, Windows build successful. Prior baseline: 27 EditMode + 35 PlayMode = 62 passing; full suite not rerun for this presentation-only change. Evidence: work/polish-final.xml, polish-build.log, polish-after.log/txt (workspace-relative).
-- Visible real-time automated touch: novice victory at 61.88s, 480 survivors, 7 losses, 7 gates, 170 kills. Bad route defeat at 3.66s. Pause/replay/reset/pools pass; zero dropped shots/enemies.
-- Tests cover gap boundaries, 60-robot middle/left/right shooting, single collection, line-free popup, portrait bounds and existing run/boss behavior.
-- Prior stress, **not rerun after latest spacing/UI**: 60 robots, 60 peak enemies, 405 bullets; mean frame 16.73ms, gameplay tick 1.643ms/zero allocations; no drops. Windows result, not phone verification.
-
+- **27 EditMode + 37 PlayMode = 64 passing**; Windows development build successful.
+- Visible automated touch: novice victory 61.87s/481 survivors; bad route defeat 3.64s. Pause/retry/reset/pools pass; zero dropped shots/enemies. Sampled audio peak 0.394, not a listening assessment.
+- 540×960 Windows stress: 60 robots, 64 peak enemies, 405 peak bullets; 16.74ms mean wall frame, 2.17ms mean GPU, 2.627ms gameplay tick, zero gameplay tick allocations and zero drops. No phone claim.
+- Inspected real rendered damage, boss ghost, movement/growth, MK10 fire, boss warning and defeat images. Tests cover health trails/reset/reduced motion, boss death, frame-rate steering, routes and pool stability.
 ## Resume state
 
-Completed: three-detail polish pass, final visible novice/bad replay and refreshed victory image. All targeted checks pass; no drops, pause/replay/reset/pools clean.
-In progress: none.
-**Next best polish task:** refine boss destruction timing into a short debris/sound sequence. Keep existing loop and art; human gate clarity, enjoyment and boss balance still need observation. No additional work started.
-Known issues: strong builds melt the 5500-HP boss after its 1.6s armor phase. Human enjoyment, phone controls/audio/haptics/performance remain unverified. Full QA idle/edge assertions may need updating because middle intentionally earns no gate reward.
-
+Completed: current game-feel pass, tests, build, visible win/loss replay, stress check and screenshots. In progress: none.
+**Next exact task:** observe unfamiliar players using steering and reading health/damage; listen to actual game audio and assess boss survival. Tune measured issues within existing systems. Preserve authored shifts and art.
+Known limits: phone touch/haptics/performance and human enjoyment remain unverified. Strong builds can kill the boss soon after armor opens. Avoid running PresentationUpgrade or PlayFeelTuning; both overwrite hand edits.
 ## Relevant files and commands
 
 - Runtime: `SalvageSquad/Assets/Game/Runtime` — GateRow, CombatSystem, SquadController, SliceRun, SliceFeedback.
@@ -77,3 +77,14 @@ Armored boss and striped lane telegraph.
 [Before this polish pass](Handoff-Images/polish-before-victory.png) · [Medal stamp in motion](Handoff-Images/06-medal-stamp.png)
 
 Latest images inspected from actual renders. Audio layering implemented; subjective listening and physical phone checks pending.
+
+
+### Latest game-feel captures
+
+![Squad loses health](Handoff-Images/07-health-loss.png)
+
+![Boss ghost health](Handoff-Images/08-boss-health.png)
+
+![Upgraded warm gunfire](Handoff-Images/09-upgraded-fire.png)
+
+![Steering and squad growth](Handoff-Images/10-steering-growth.png)

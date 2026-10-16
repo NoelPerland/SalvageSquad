@@ -16,6 +16,9 @@ namespace SalvageSquad
         public Transform[] trackMarkers;
         public Text squadLabel, upgradeLabel, hint, resultTitle, resultStats, pauseLabel, bossLabel;
         public Image progress, bossBar;
+        public Image SquadHealth => squadHealth;
+        public Image SquadHealthTrail => squadHealthTrail;
+        public Image BossHealthTrail => bossHealthTrail;
         public RectTransform safeArea;
         public GameObject resultPanel;
         public GameObject toastPlate;
@@ -54,6 +57,10 @@ namespace SalvageSquad
         string resultNext;
         Color squadColor;
         float hurtTime;
+        Image squadHealth, squadHealthTrail, bossHealthTrail;
+        RectTransform squadHealthFrame;
+        int peakUnits;
+        float squadFill, squadGhost, bossFill, bossGhost, squadGhostDelay, bossGhostDelay, lastSquadHealth, lastBossHealth;
         bool powerPositive;
         CanvasGroup powerGroup;
         public void Awake()
@@ -67,11 +74,12 @@ namespace SalvageSquad
             squadColor=squadLabel.color;
             resultStats.rectTransform.sizeDelta = new Vector2(resultStats.rectTransform.sizeDelta.x, 126);
             bossBarColor=bossBar.color;
+            MakeHealthBars();
             mission = safeArea.Find("Header/Mission")?.GetComponent<Text>();
             Application.targetFrameRate = 60;
             medal = resultPanel.transform.Find("Medal")?.GetComponent<Text>();
             rewardSeal = resultPanel.transform.Find("Reward seal")?.GetComponent<Image>();
-            combat.Initialize(true); squad.Initialize(combat, 60); feedback.Initialize();
+            combat.Initialize(true); squad.Initialize(combat, 60); squad.feedback=feedback; feedback.Initialize();
             PreparePowerPopup();
             int count = 0;
             foreach (var data in new[] { level, nextShift }) if (data)
@@ -113,6 +121,12 @@ namespace SalvageSquad
             combat.Contact = (x, damage) => { if (Mathf.Abs(squad.transform.position.x - x) < 1.45f) DamageSquad(damage, "Machines reached your squad. Shoot their lane or steer clear."); };
             combat.ResetCombat(); squad.ResetSquad(); feedback.ResetFeedback();
             powerTime=hudPulse=hurtTime=0;shownScore=-1;squadLabel.color=squadColor;
+            peakUnits=5;squadFill=squadGhost=bossFill=bossGhost=lastSquadHealth=lastBossHealth=1;
+            squadGhostDelay=bossGhostDelay=0;
+            squadHealth.fillAmount=squadHealthTrail.fillAmount=1;
+            bossBar.fillAmount=bossHealthTrail.fillAmount=1;
+            squadHealthFrame.localScale=Vector3.one;
+            squadHealth.color=new Color(.18f,.72f,.68f);
             squadLabel.transform.localScale=Vector3.one;
             if(powerLabel)powerLabel.gameObject.SetActive(false);
             if(resultShade)resultShade.SetActive(false);
@@ -173,6 +187,7 @@ namespace SalvageSquad
                 squad.transform.position = Vector3.MoveTowards(squad.transform.position, Vector3.zero, dt * 10);
             if (State != RunState.Running)
             {
+                if(State==RunState.Defeat)UpdateHealthBars(dt);
                 feedback.Tick(dt);
                 float effectStep=Mathf.Min(dt,Mathf.Max(0,1.2f-finishTime));
                 finishTime += dt;
@@ -236,7 +251,6 @@ namespace SalvageSquad
             }
             if (BossStarted)
             {
-                bossBar.fillAmount = combat.BossHealth;
                 if(!bossOpened&&!combat.BossArmored)
                 {
                     bossOpened=true;bossBar.color=bossBarColor;bossLabel.text="SCRAP CRUSHER";
@@ -272,6 +286,7 @@ namespace SalvageSquad
             if (hudTime <= 0 || lastUnits != squad.UnitCount) { RefreshHUD(); hudTime = .1f; }
             hudPulse=Mathf.Max(0,hudPulse-dt*3);squadLabel.transform.localScale=Vector3.one*(1+(feedback.ReducedMotion?0:hudPulse*.09f));
             hurtTime=Mathf.Max(0,hurtTime-dt);squadLabel.color=Color.Lerp(squadColor,new Color(1,.45f,.3f),Mathf.Clamp01(hurtTime*4));
+            UpdateHealthBars(dt);
             feedback.Tick(dt);
             if(powerLabel && powerTime>0)
             {
@@ -351,6 +366,7 @@ namespace SalvageSquad
             defeatReason = reason;
             int lost = before - squad.UnitCount;
             hurtTime=.45f;squadLabel.color=new Color(1,.45f,.3f);
+            squadGhostDelay=.18f;
             for(int i=Mathf.Min(squad.UnitCount,squad.bodies.Length);i<Mathf.Min(before,Mathf.Min(squad.bodies.Length,squad.UnitCount+3));i++)combat.Pop(squad.bodies[i].position+Vector3.up*.6f);
             feedback.Play(false);
             if (hazardTime <= 0) Toast("−" + lost + "  ROBOTS LOST");
@@ -361,6 +377,7 @@ namespace SalvageSquad
         {
             if (State != RunState.Running) return;
             State = victory ? RunState.Victory : RunState.Defeat; squad.CancelDrag();
+            if(!victory)UpdateHealthBars(.02f);
             hazardTime = 0; combat.BossWindup = 0;
             toastTime=powerTime=0;
             RefreshHUD();
@@ -428,6 +445,50 @@ namespace SalvageSquad
                 upgradeLabel.text = $"POWER {power}   •   RATE {squad.FireRate:0.#}×   •   MK {squad.WeaponTier}";
             }
             progress.fillAmount = BossStarted ? .8f + .2f * (1 - combat.BossHealth) : .8f * Mathf.Clamp01(Elapsed / bossTime);
+        }
+        void MakeHealthBars()
+        {
+            var header=safeArea.Find("Header");
+            var frame=new GameObject("Squad health",typeof(RectTransform),typeof(Image)).GetComponent<Image>();
+            frame.transform.SetParent(header,false);frame.raycastTarget=false;
+            frame.color=new Color(.08f,.18f,.22f,.9f);
+            squadHealthFrame=frame.rectTransform;
+            squadHealthFrame.anchorMin=squadHealthFrame.anchorMax=new Vector2(0,1);
+            squadHealthFrame.pivot=new Vector2(0,1);
+            squadHealthFrame.anchoredPosition=new Vector2(96,-60);
+            squadHealthFrame.sizeDelta=new Vector2(328,5);
+            squadHealthTrail=Instantiate(bossBar,frame.transform);squadHealthTrail.name="Health lost";
+            squadHealthTrail.color=new Color(1,.73f,.36f);squadHealthTrail.raycastTarget=false;
+            squadHealth=Instantiate(bossBar,frame.transform);squadHealth.name="Health remaining";
+            squadHealth.color=new Color(.18f,.72f,.68f);squadHealth.raycastTarget=false;
+            bossHealthTrail=Instantiate(bossBar,bossBar.transform.parent);
+            bossHealthTrail.name="Boss health lost";
+            bossHealthTrail.transform.SetSiblingIndex(bossBar.transform.GetSiblingIndex());
+            bossHealthTrail.color=new Color(1,.73f,.36f);bossHealthTrail.raycastTarget=false;
+        }
+        void UpdateHealthBars(float dt)
+        {
+            peakUnits=Mathf.Max(peakUnits,squad.UnitCount);
+            float health=(float)squad.UnitCount/Mathf.Max(1,peakUnits);
+            if(health<lastSquadHealth-.0001f)squadGhostDelay=.18f;
+            lastSquadHealth=health;
+            squadFill=Mathf.Lerp(squadFill,health,1-Mathf.Exp(-dt*12));
+            squadGhostDelay=Mathf.Max(0,squadGhostDelay-dt);
+            if(squadGhostDelay<=0)squadGhost=Mathf.Lerp(squadGhost,squadFill,1-Mathf.Exp(-dt*5));
+            if(feedback.ReducedMotion){squadFill=health;squadGhost=health;}
+            squadHealth.fillAmount=squadFill;squadHealthTrail.fillAmount=Mathf.Max(squadFill,squadGhost);
+            squadHealth.color=Color.Lerp(new Color(1,.28f,.18f),new Color(.18f,.72f,.68f),Mathf.InverseLerp(.18f,.7f,health));
+            squadHealthFrame.localScale=Vector3.one*(feedback.ReducedMotion?1:1+Mathf.Clamp01(hurtTime*6)*.045f);
+            if(!BossStarted)return;
+            float bossHealth=combat.BossHealth;
+            if(bossHealth<lastBossHealth-.0001f)bossGhostDelay=.18f;
+            lastBossHealth=bossHealth;
+            bossFill=Mathf.Lerp(bossFill,bossHealth,1-Mathf.Exp(-dt*12));
+            bossGhostDelay=Mathf.Max(0,bossGhostDelay-dt);
+            if(bossGhostDelay<=0)bossGhost=Mathf.Lerp(bossGhost,bossFill,1-Mathf.Exp(-dt*5));
+            if(feedback.ReducedMotion){bossFill=bossHealth;bossGhost=bossHealth;}
+            bossBar.fillAmount=bossFill;bossHealthTrail.fillAmount=Mathf.Max(bossFill,bossGhost);
+            if(!combat.BossArmored)bossBar.color=Color.Lerp(new Color(1,.28f,.18f),bossBarColor,Mathf.InverseLerp(.12f,.55f,bossHealth));
         }
         void ApplySafeArea()
         {

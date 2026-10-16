@@ -10,6 +10,53 @@ namespace SalvageSquad.Tests
 {
     public class SliceRunTests
     {
+        [UnityTest]
+        public IEnumerator HealthBarsShowDelayedLossThenCatchUpAndReset()
+        {
+            yield return SceneManager.LoadSceneAsync("Scrapline");yield return null;
+            var run=Object.FindFirstObjectByType<SliceRun>();run.enabled=false;run.ResetRun();
+            run.squad.SetCount(20);run.Advance(.02f);
+            run.DamageSquad(10);run.Advance(.02f);
+            Capture("Feel-Squad-Hit");
+            Assert.That(run.SquadHealth.fillAmount,Is.InRange(.5f,.99f));
+            Assert.That(run.SquadHealthTrail.fillAmount,Is.GreaterThan(run.SquadHealth.fillAmount));
+            Assert.That(run.SquadHealthTrail.color,Is.Not.EqualTo(run.SquadHealth.color));
+            for(int i=0;i<80;i++)run.Advance(.02f);
+            Assert.That(run.SquadHealth.fillAmount,Is.EqualTo(.5f).Within(.002f));
+            Assert.That(run.SquadHealthTrail.fillAmount,Is.EqualTo(.5f).Within(.002f));
+            run.feedback.ToggleMotion();run.squad.SetCount(20);run.Advance(.02f);
+            run.DamageSquad(10);run.Advance(.02f);
+            Assert.That(run.SquadHealth.fillAmount,Is.EqualTo(.5f));
+            Assert.That(run.SquadHealthTrail.fillAmount,Is.EqualTo(.5f));
+            run.ResetRun();
+            Assert.That(run.SquadHealth.fillAmount,Is.EqualTo(1));
+            Assert.That(run.SquadHealthTrail.fillAmount,Is.EqualTo(1));
+            Assert.That(run.BossHealthTrail.fillAmount,Is.EqualTo(1));
+        }
+        [UnityTest]
+        public IEnumerator BossHealthShowsDamageBeforeTrailingLoss()
+        {
+            yield return SceneManager.LoadSceneAsync("Scrapline");yield return null;
+            var run=Object.FindFirstObjectByType<SliceRun>();run.enabled=false;
+            var original=run.level;var trial=Object.Instantiate(original);
+            var boss=ScriptableObject.CreateInstance<EnemySettings>();
+            boss.kind=EnemyKind.Boss;boss.health=1000;boss.size=2;boss.speed=0;
+            trial.encounters=new[]{new Encounter{time=.1f,kind=EncounterKind.Boss,enemy=boss}};trial.deadline=20;
+            try
+            {
+                run.level=trial;run.ResetRun();run.Advance(.1f);run.Advance(1.61f);
+                Assert.That(run.combat.BossArmored,Is.False);
+                run.combat.Fire(new Vector3(0,.6f,8),300);run.Advance(.06f);
+                Capture("Feel-Boss-Hit");
+                Assert.That(run.combat.BossHealth,Is.LessThan(.75f));
+                Assert.That(run.bossBar.fillAmount,Is.GreaterThan(run.combat.BossHealth));
+                Assert.That(run.BossHealthTrail.fillAmount,Is.GreaterThan(run.bossBar.fillAmount));
+                for(int i=0;i<60;i++)run.Advance(.02f);
+                Assert.That(run.BossHealthTrail.fillAmount,Is.LessThan(.8f));
+                run.ResetRun();Assert.That(run.BossHealthTrail.fillAmount,Is.EqualTo(1));
+            }
+            finally { run.level=original;run.ResetRun();Object.Destroy(trial);Object.Destroy(boss); }
+        }
         int previousBest;
         bool hadBest;
         [SetUp] public void PreserveBest() { hadBest=PlayerPrefs.HasKey("SliceBest");previousBest=PlayerPrefs.GetInt("SliceBest"); }
@@ -608,6 +655,8 @@ namespace SalvageSquad.Tests
                 for(int i=0;i<100&&run.State==RunState.Running;i++)run.Advance(.02f);
                 Assert.That(run.State,Is.EqualTo(RunState.Defeat));Assert.That(run.resultStats.text,Does.Contain("striped lane"));
                 run.Advance(1);Assert.That(run.resultPanel.activeSelf,Is.True);
+                Assert.That(run.SquadHealth.fillAmount,Is.LessThan(.01f));
+                Assert.That(run.SquadHealthTrail.fillAmount,Is.LessThan(.2f));
                 Assert.That(run.powerLabel.gameObject.activeSelf,Is.False);Assert.That(run.toastPlate.activeSelf,Is.False);Assert.That(run.hint.gameObject.activeSelf,Is.False);
                 Assert.That(run.squadLabel.text,Does.EndWith("00"));
             }
@@ -663,7 +712,7 @@ namespace SalvageSquad.Tests
                 run.ResetRun();run.squad.SetDesiredX(2);
                 run.squad.Tick(1f/fps);
                 float lean=Mathf.DeltaAngle(0,run.squad.bodies[0].localEulerAngles.z);
-                Assert.That(lean,Is.EqualTo(-15).Within(.01f));
+                Assert.That(lean,Is.InRange(-15,-1),"Visual lean eases in while movement remains immediate.");
                 for(int i=1;i<fps*6;i++){run.squad.Tick(1f/fps);run.combat.Tick(1f/fps);}
                 min=Mathf.Min(min,run.combat.TotalShots);max=Mathf.Max(max,run.combat.TotalShots);
                 Assert.That(run.squad.transform.position.x,Is.EqualTo(2).Within(.001f));
