@@ -1,0 +1,1 @@
+Portrait WebGL wrapper. After WebBuild.Build completes, copy this index.html into web-build/. It uses the existing Build/web-build loader, data and wasm files. Fit is 9:16 on desktop, phone and fullscreen. Test resize and pause/resume before publishing.
