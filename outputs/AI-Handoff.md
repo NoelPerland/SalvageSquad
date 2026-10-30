@@ -2,7 +2,7 @@
 
 Updated 2026-10-16. Continue the existing project; do not recreate it.
 
-Project: `C:/Users/Noel/Documents/Codex/2026-10-12/we-are-starting-a-brand-new/outputs/SalvageSquad`
+Project: `outputs/SalvageSquad` relative to repository root. Open this folder in Unity Hub.
 Unity **6000.3.26f1**, C#, URP. Windows development; iOS signing/device validation deferred.
 
 Read `SalvageSquad/AGENTS.md`, then only task-relevant files. Caveman/Ponytail; no broad scans, new frameworks or meta systems. OmniRoute is unconfigured.

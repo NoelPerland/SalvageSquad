@@ -11,3 +11,7 @@ Open **outputs/SalvageSquad** as the Unity project, then open `Assets/Scenes/Scr
 ![Current gameplay](outputs/Handoff-Images/04-boss-warning.png)
 
 Windows development is supported; physical phone verification is pending. Generated Unity caches, Windows builds and local test logs are excluded. Unity regenerates its Library on first open.
+
+Historical test counts and performance samples in handoff describe previous Windows runs. Referenced work logs/XML and generated builds are not included in this clone; they are not fresh verification on this device. Reproduce checks using project AGENTS.md with the pinned Unity Editor. Human playtests, audio listening, and physical-phone measurements remain required before tuning those aspects.
+
+Use [focused playtest protocol](PLAYTEST.md) for the documented next task. It records steering comprehension, health/audio observations and boss timing before any tuning.
